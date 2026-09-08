@@ -99,6 +99,8 @@
   .g7 .imgbox img,.g7 .imgbox .noimg{height:88px}  .g7 .nm{font-size:12px} .g7 .pr{font-size:17px}
   .g8 .imgbox img,.g8 .imgbox .noimg{height:74px}  .g8 .nm{font-size:11px} .g8 .pr{font-size:15px}
   .g9 .imgbox img,.g9 .imgbox .noimg{height:64px}  .g9 .nm{font-size:10px} .g9 .pr{font-size:13px}
+  .im{position:absolute; bottom:4px; left:5px; border:0; background:#22303a; color:#8fd0ff; border-radius:6px; font-size:11px; padding:3px 7px; cursor:pointer; z-index:3}
+  body.exporting .im{display:none}
 </style>
 </head>
 <body>
@@ -111,6 +113,14 @@
     <div class="line">
       <input id="q" type="text" placeholder="カード名・型番で検索（例: リザードンex ／ 201/165）" onkeydown="if(event.key==='Enter')doSearch()">
       <button class="btn btn-sub" onclick="doSearch()">検索</button>
+    </div>
+    <div class="line">
+      <span class="lbl">テンプレート</span>
+      <select id="tplSel" style="background:#0b0b0b;color:#F7F4EC;border:1px solid #333;border-radius:8px;padding:9px 11px;font-size:13px;min-width:160px"><option value="">（選択）</option></select>
+      <button class="btn btn-sub" onclick="tplLoad()">読込</button>
+      <button class="btn btn-sub" onclick="tplUpdate()">選択中を更新</button>
+      <button class="btn btn-sub" onclick="tplSave()">新規保存</button>
+      <button class="btn btn-sub" onclick="tplDel()">削除</button>
     </div>
     <div class="line">
       <span class="lbl">背景</span>
@@ -190,7 +200,7 @@
     setStatus('検索中…');
     jsonp(apiUrl(), {action:'search', q:q}).then(function(d){
       if(d.error){ setStatus('検索失敗: '+d.error,true); return; }
-      lastResults=d.items||[]; renderResults();
+      lastResults=d.items||[]; renderResults(); tplRefresh();
       setStatus(lastResults.length? lastResults.length+'件ヒット。「追加」で買取表へ。':'ヒットなし。',!lastResults.length);
     }).catch(function(e){ setStatus('検索失敗: '+e.message,true); });
   }
@@ -217,7 +227,7 @@
     var it=lastResults[i]; if(!it) return;
     if(items.some(function(x){ return String(x.id)===String(it.id) && x.name===it.name; })){ setStatus(it.name+' は既に表にあります。'); return; }
     if(items.length>=MAX){ setStatus('最大'+MAX+'件までです。',true); return; }
-    items.push({id:it.id, name:it.name, img:it.img, src:'', rushPrice:it.rushPrice, aPrice:it.aPrice, buy:it.buy});
+    items.push({id:it.id, code:it.code, name:it.name, img:it.img, imgAlt:it.imgAlt, rushPrice:it.rushPrice, aPrice:it.aPrice, buy:it.buy});
     render(); setStatus(it.name+' を追加しました。');
   }
 
@@ -230,7 +240,7 @@
     list.forEach(function(it,i){
       var name=(it.name&&String(it.name).trim())? it.name : ('カード '+it.id);
       var thumb=it.img
-        ? '<img class="thumb" data-cdn="'+esc(it.img)+'" src="'+esc(it.img)+'" alt="" onerror="imgErr(this)">'
+        ? '<img class="thumb" data-cdn="'+esc(it.img)+'" data-alt="'+esc(it.imgAlt||'')+'" src="'+esc(it.img)+'" alt="" onerror="imgErr(this)">'
         : '<div class="noimg"></div>';
       var cell=document.createElement('div');
       cell.className='cell';
@@ -239,6 +249,7 @@
         '<div class="drag" title="ドラッグで移動">⠿</div>'+
         '<button class="rm" title="消す" onclick="removeRow('+i+')">×</button>'+
         '<button class="ed" onclick="editPrice('+i+')">変更</button>'+
+        '<button class="im" onclick="changeImg('+i+')">画像</button>'+
         '<div class="imgbox">'+thumb+'</div>'+
         '<div class="nm" contenteditable="true" onblur="syncName('+i+',this)">'+esc(name)+'</div>'+
         '<div class="pr"><span class="y">¥</span>'+yen(it.buy)+'</div>'+
@@ -255,7 +266,73 @@
     v=String(v).replace(/[^\d]/g,''); if(v==='') return;
     items[i].buy=Number(v); render();
   }
-  function imgErr(el){ var d=document.createElement('div'); d.className='noimg'; if(el.parentNode) el.parentNode.replaceChild(d,el); }
+  function imgErr(el){
+    var alt=el.getAttribute('data-alt');
+    if(alt && el.src!==alt && !el.dataset.tried){ el.dataset.tried='1'; el.setAttribute('data-cdn',alt); el.src=alt; return; }
+    var d=document.createElement('div'); d.className='noimg'; if(el.parentNode) el.parentNode.replaceChild(d,el);
+  }
+  // 画像URLを手動で差し替え(スプレッドシートに保存)
+  function changeImg(i){
+    if(!items[i]) return;
+    var cur=items[i].img||'';
+    var url=prompt('画像URLを入力（空欄で自動に戻す）', cur);
+    if(url===null) return;
+    url=url.trim();
+    setStatus('画像を保存中…');
+    jsonp(apiUrl(), {action:'img_set', code:items[i].code||'', name:items[i].name||'', url:url}).then(function(r){
+      if(r && (r.status==='saved'||r.status==='cleared')){
+        items[i].img = url || items[i].imgAlt || '';
+        render(); setStatus('画像を'+(url?'差し替えました':'自動に戻しました')+'（保存済み）。');
+      } else setStatus('画像保存に失敗: '+((r&&r.error)||'不明'),true);
+    }).catch(function(e){ setStatus('画像保存に失敗: '+e.message,true); });
+  }
+
+  /* ---- テンプレート ---- */
+  function tplRefresh(){
+    jsonp(apiUrl(), {action:'tpl_list'}).then(function(d){
+      var sel=document.getElementById('tplSel'); var cur=sel.value;
+      sel.innerHTML='<option value="">（選択）</option>'+((d.names||[]).map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join(''));
+      sel.value=cur;
+    }).catch(function(){});
+  }
+  function tplLoad(){
+    var name=document.getElementById('tplSel').value;
+    if(!name){ setStatus('テンプレートを選択してください。',true); return; }
+    setStatus('テンプレート「'+name+'」を読込中（最新価格で再計算）…');
+    jsonp(apiUrl(), {action:'tpl_load', name:name}).then(function(d){
+      if(d.error){ setStatus('読込失敗: '+d.error,true); return; }
+      items=(d.items||[]); render();
+      setStatus('テンプレート「'+name+'」を読み込みました（'+items.length+'件・最新価格）。');
+    }).catch(function(e){ setStatus('読込失敗: '+e.message,true); });
+  }
+  function tplPayload(){ return JSON.stringify(items.slice(0,MAX).map(function(x){ return {code:x.code||'', name:x.name||''}; })); }
+  function tplSave(){
+    if(!items.length){ setStatus('保存する内容がありません。',true); return; }
+    var name=prompt('新しいテンプレート名を入力');
+    if(!name) return;
+    setStatus('保存中…');
+    jsonp(apiUrl(), {action:'tpl_save', name:name, items:tplPayload()}).then(function(r){
+      if(r.status==='saved'){ setStatus('テンプレート「'+name+'」を保存しました。'); tplRefresh(); document.getElementById('tplSel').value=name; }
+      else setStatus('保存失敗: '+(r.error||'不明'),true);
+    }).catch(function(e){ setStatus('保存失敗: '+e.message,true); });
+  }
+  function tplUpdate(){
+    var name=document.getElementById('tplSel').value;
+    if(!name){ setStatus('更新するテンプレートを選択してください。',true); return; }
+    if(!items.length){ setStatus('保存する内容がありません。',true); return; }
+    setStatus('「'+name+'」を更新中…');
+    jsonp(apiUrl(), {action:'tpl_save', name:name, items:tplPayload()}).then(function(r){
+      if(r.status==='saved') setStatus('テンプレート「'+name+'」を更新しました。');
+      else setStatus('更新失敗: '+(r.error||'不明'),true);
+    }).catch(function(e){ setStatus('更新失敗: '+e.message,true); });
+  }
+  function tplDel(){
+    var name=document.getElementById('tplSel').value;
+    if(!name){ setStatus('削除するテンプレートを選択してください。',true); return; }
+    if(!confirm('テンプレート「'+name+'」を削除しますか？')) return;
+    jsonp(apiUrl(), {action:'tpl_del', name:name}).then(function(){ setStatus('削除しました。'); tplRefresh(); })
+      .catch(function(e){ setStatus('削除失敗: '+e.message,true); });
+  }
 
   (function(){
     var rows=document.getElementById('rows');
