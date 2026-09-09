@@ -228,6 +228,11 @@
   #epCopy{ display:block; width:100%; margin-bottom:10px; background:#1d9bf0; color:#fff; border:0;
     border-radius:8px; padding:9px 0; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; }
   #epCopy:active{ transform:translateY(1px); }
+
+  /* ==== 価格更新ボタン ==== */
+  #epRefresh{ display:block; width:100%; margin-bottom:8px; background:#2e7d32; color:#fff; border:0;
+    border-radius:8px; padding:9px 0; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; }
+  #epRefresh:disabled{ opacity:.6; cursor:default; }
 </style>
 </head>
 <body>
@@ -285,6 +290,7 @@
 
     <aside id="editPanel">
       <div class="epHead">編集リスト <span id="epCount"></span></div>
+      <button id="epRefresh" onclick="refreshPrices()">価格を更新（トレカキングダム最新）</button>
       <button id="epCopy" onclick="copyForX()">Xポスト用にコピー</button>
       <div id="epList"></div>
       <div class="epHint">並べ替えはプレビュー上の⠿をドラッグ</div>
@@ -399,6 +405,16 @@
     document.getElementById('editToggle').textContent = document.body.classList.contains('edit-closed') ? '◀ 編集' : '▶ 閉じる';
   }
   function epName(i,el){ if(items[i]){ items[i].name=el.value; renderPreviewOnly(); } }
+  function refreshPrices(){
+    if(!confirm('トレカキングダムの最新価格を取り込みます。数十秒かかる場合があります。よろしいですか？')) return;
+    setStatus('最新価格を取り込み中…（時間がかかります）');
+    var btn=document.getElementById('epRefresh'); if(btn){ btn.disabled=true; btn.textContent='更新中…'; }
+    jsonp(apiUrl(), {action:'refresh'}).then(function(r){
+      if(r && r.status==='refreshed'){ setStatus('最新価格を取り込みました（'+r.count+'件）。検索やテンプレ読込に反映されます。'); }
+      else setStatus('更新失敗: '+((r&&r.error)||'不明'),true);
+    }).catch(function(e){ setStatus('更新失敗: '+e.message,true); })
+    .then(function(){ if(btn){ btn.disabled=false; btn.textContent='価格を更新（トレカキングダム最新）'; } });
+  }
   function copyForX(){
     var lines=items.slice(0,MAX).map(function(x){
       var nm=(x.name||'').trim();
