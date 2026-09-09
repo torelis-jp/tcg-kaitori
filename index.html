@@ -485,20 +485,42 @@
   }
 
   /* ---- 手動でカードを追加(トレカキングダムに無いカード) ---- */
+  // 型番+セットから画像URLを生成(プロモ=hegelgelda .webp 3桁 / それ以外=Limitless .png)
+  function genImgUrl_(setCode, num){
+    setCode=(setCode||'').trim(); num=String(num||'').replace(/[^0-9]/g,'');
+    if(!setCode || !num) return '';
+    if(/-P$/i.test(setCode)){
+      var n3 = num.length>=3 ? num : ('000'+num).slice(-3);
+      return 'https://hegelgelda.github.io/tcg-catalog/images/promo/'+setCode+'/'+setCode+'_'+n3+'.webp';
+    }
+    return 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpc/'+setCode+'/'+setCode+'_'+String(parseInt(num,10))+'_R_JP_LG.png';
+  }
   async function manualAdd(){
     var name=prompt('カード名を入力'); if(!name) return; name=name.trim(); if(!name) return;
     var buyS=prompt('買取価格（円）を入力'); if(buyS===null) return;
     var buy=Number(String(buyS).replace(/[^\d]/g,''))||0;
-    var img=prompt('画像URL（空欄可 / 外部サイトのURLでもOK）','')||''; img=img.trim();
-    if(img && confirm('この画像を自分のGitHubに保存して使いますか？\n（推奨：URLが安定し、元サイトが消えても残ります。GAS未設定なら元URLのまま使用）')){
-      setStatus('画像を取り込み中…');
-      try{
-        var r=await jsonp(apiUrl(),{action:'img_import', url:img});
-        if(r && r.url){ img=r.url; if(r.note) setStatus(r.note); }
-        else if(r && r.error){ alert('取り込み失敗: '+r.error+'\n元のURLをそのまま使います'); }
-      }catch(e){ alert('取り込み失敗: '+e.message+'\n元のURLをそのまま使います'); }
+
+    var setCode=prompt('セットコードを入力（例 SM5M / SV1a / M6 / SV-P）\n空欄にすると画像URLを直接入力できます','')||'';
+    setCode=setCode.trim();
+    var num='', img='', code='';
+    if(setCode){
+      num=(prompt('型番の番号を入力（例 1 / 072 / 110）','')||'').trim();
+      img=genImgUrl_(setCode, num);
+      code = num + (num?'/':'') ;   // 分母不明なので番号のみ
+      // 名前に {番号}[セット] を付与
+      if(num) name = name + ' {'+num+'}['+setCode+']';
+    } else {
+      img=(prompt('画像URL（外部サイトのURLでもOK / 空欄可）','')||'').trim();
+      if(img && confirm('この画像を自分のGitHubに保存して使いますか？\n（推奨：URLが安定します。GAS未設定なら元URLのまま使用）')){
+        setStatus('画像を取り込み中…');
+        try{ var r=await jsonp(apiUrl(),{action:'img_import', url:img});
+          if(r && r.url){ img=r.url; if(r.note) setStatus(r.note); }
+          else if(r && r.error){ alert('取り込み失敗: '+r.error+'\n元のURLをそのまま使います'); }
+        }catch(e){ alert('取り込み失敗: '+e.message+'\n元のURLをそのまま使います'); }
+      }
+      code=(prompt('型番（任意・例 110/080）','')||'').trim();
     }
-    var code=prompt('型番（任意・例 110/080）','')||'';
+
     setStatus('保存中…');
     jsonp(apiUrl(),{action:'custom_add', name:name, code:code, buy:buy, img:img, rarity:''}).then(function(r){
       if(r && r.status==='saved'){
