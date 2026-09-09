@@ -215,6 +215,14 @@
   #editToggle{ position:fixed; top:14px; right:14px; z-index:50; background:var(--gold); color:#241606;
     border:0; border-radius:8px; font-weight:700; font-size:13px; padding:9px 13px; cursor:pointer; font-family:inherit; }
   @media(max-width:1000px){ .layout{flex-direction:column; align-items:center} #editPanel{width:100%; max-width:760px; position:static} }
+
+  /* ==== 編集パネル: 価格入力/ドラッグ ==== */
+  .epdrag{ cursor:grab; color:#cbb26a; user-select:none; padding:0 2px; flex:none; }
+  .epy{ color:#e8c15a; font-weight:700; margin-left:2px; }
+  .epprice{ width:80px; flex:none; background:#0b0b0b; color:#ffe08a; border:1px solid #333; border-radius:6px;
+    padding:5px 6px; font-size:12px; font-family:inherit; text-align:right; }
+  .epRow.epOver{ outline:2px dashed var(--gold); outline-offset:-2px; }
+  .epRow.epDragging{ opacity:.4; }
 </style>
 </head>
 <body>
@@ -371,10 +379,6 @@
       cell.setAttribute('data-idx', i);
       cell.innerHTML=
         '<div class="drag" title="ドラッグで移動">⠿</div>'+
-        '<button class="rm" title="消す" onclick="removeRow('+i+')">×</button>'+
-        '<button class="ed" onclick="editPrice('+i+')">変更</button>'+
-        '<button class="im" onclick="changeImg('+i+')">画像</button>'+
-        '<button class="psa" onclick="togglePsa('+i+')">PSA</button>'+
         (it.psa?'<img class="psaBadge" src="'+PSA_BADGE+'" alt="PSA10">':'')+'<div class="imgbox">'+thumb+'</div>'+
         '<div class="nm" contenteditable="true" onblur="syncName('+i+',this)">'+esc(name)+'</div>'+
         '<div class="pr"><span class="y">¥</span>'+yen(it.buy)+'</div>'+
@@ -388,22 +392,41 @@
     document.body.classList.toggle('edit-closed');
     document.getElementById('editToggle').textContent = document.body.classList.contains('edit-closed') ? '◀ 編集' : '▶ 閉じる';
   }
-  function epName(i,el){ if(items[i]){ items[i].name=el.value; render(); } }
+  function epName(i,el){ if(items[i]){ items[i].name=el.value; renderPreviewOnly(); } }
   function renderEdit(){
     var el=document.getElementById('epList'); if(!el) return;
     var list=items.slice(0,MAX);
     document.getElementById('epCount').textContent='('+list.length+'枚)';
     el.innerHTML = list.map(function(it,i){
-      return '<div class="epRow">'+
+      return '<div class="epRow" draggable="true" data-i="'+i+'">'+
+        '<span class="epdrag" title="ドラッグで移動">⠿</span>'+
         (it.img?'<img class="epimg" src="'+esc(it.img)+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<span class="epimg"></span>')+
         '<input class="epname" value="'+esc(it.name||'')+'" oninput="epName('+i+',this)">'+
-        '<button class="epbtn ep-ed" onclick="editPrice('+i+')" title="価格">¥'+(isNum(it.buy)?yen(it.buy):'-')+'</button>'+
+        '<span class="epy">¥</span><input class="epprice" type="text" inputmode="numeric" value="'+(isNum(it.buy)?yen(it.buy):'')+'" data-i="'+i+'" oninput="epPrice('+i+',this)" onkeydown="epPriceKey(event,'+i+')">'+
         '<button class="epbtn ep-im" onclick="changeImg('+i+')">画像</button>'+
         '<button class="epbtn ep-psa'+(it.psa?' on':'')+'" onclick="togglePsa('+i+')">PSA</button>'+
         '<button class="epbtn ep-x" onclick="removeRow('+i+')">×</button>'+
       '</div>';
     }).join('') || '<div class="epHint">カードを追加すると一覧に出ます。</div>';
   }
+  function epPrice(i,el){ if(items[i]){ items[i].buy=Number(String(el.value).replace(/[^\d]/g,''))||0; renderPreviewOnly(); } }
+  function epPriceKey(ev,i){
+    if(ev.key==='Enter'){ ev.preventDefault();
+      var inputs=document.querySelectorAll('#epList .epprice');
+      for(var k=0;k<inputs.length;k++){ if(+inputs[k].getAttribute('data-i')===i){ if(inputs[k+1]) inputs[k+1].focus(); break; } }
+    }
+  }
+  // プレビューだけ更新(パネルのフォーカス/入力を壊さない)
+  function renderPreviewOnly(){ var keep=renderEdit; renderEdit=function(){}; try{ render(); } finally{ renderEdit=keep; } }
+  // 編集パネルのドラッグ並べ替え
+  (function(){
+    var listEl=document.getElementById('epList'); if(!listEl) return;
+    var from=null;
+    listEl.addEventListener('dragstart', function(e){ var r=e.target.closest('.epRow'); if(!r)return; from=+r.getAttribute('data-i'); e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',String(from));}catch(_){} r.classList.add('epDragging'); });
+    listEl.addEventListener('dragover', function(e){ e.preventDefault(); var r=e.target.closest('.epRow'); listEl.querySelectorAll('.epRow').forEach(function(x){x.classList.remove('epOver');}); if(r) r.classList.add('epOver'); });
+    listEl.addEventListener('drop', function(e){ e.preventDefault(); var r=e.target.closest('.epRow'); if(r==null||from==null)return; var to=+r.getAttribute('data-i'); if(to!==from){ var m=items.splice(from,1)[0]; items.splice(to,0,m); render(); } from=null; });
+    listEl.addEventListener('dragend', function(){ listEl.querySelectorAll('.epRow').forEach(function(x){x.classList.remove('epOver','epDragging');}); from=null; });
+  })();
   function togglePsa(i){ if(items[i]){ items[i].psa=!items[i].psa; render(); } }
   function syncName(i,el){ if(items[i]){ items[i].name=el.textContent; } }
   function editPrice(i){
@@ -477,7 +500,7 @@
       setStatus('テンプレート「'+name+'」を読み込みました（'+items.length+'件・最新価格）。');
     }).catch(function(e){ setStatus('読込失敗: '+e.message,true); });
   }
-  function tplPayload(){ return JSON.stringify(items.slice(0,MAX).map(function(x){ return {code:x.code||'', name:x.name||'', psa:!!x.psa}; })); }
+  function tplPayload(){ return JSON.stringify(items.slice(0,MAX).map(function(x){ return {code:x.code||'', name:x.name||'', psa:!!x.psa, buy:(x.psa? x.buy : undefined)}; })); }
   function tplSave(){
     if(!items.length){ setStatus('保存する内容がありません。',true); return; }
     var name=prompt('新しいテンプレート名を入力');
