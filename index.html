@@ -223,6 +223,11 @@
     padding:5px 6px; font-size:12px; font-family:inherit; text-align:right; }
   .epRow.epOver{ outline:2px dashed var(--gold); outline-offset:-2px; }
   .epRow.epDragging{ opacity:.4; }
+
+  /* ==== Xコピーボタン ==== */
+  #epCopy{ display:block; width:100%; margin-bottom:10px; background:#1d9bf0; color:#fff; border:0;
+    border-radius:8px; padding:9px 0; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; }
+  #epCopy:active{ transform:translateY(1px); }
 </style>
 </head>
 <body>
@@ -280,6 +285,7 @@
 
     <aside id="editPanel">
       <div class="epHead">編集リスト <span id="epCount"></span></div>
+      <button id="epCopy" onclick="copyForX()">Xポスト用にコピー</button>
       <div id="epList"></div>
       <div class="epHint">並べ替えはプレビュー上の⠿をドラッグ</div>
     </aside>
@@ -393,6 +399,27 @@
     document.getElementById('editToggle').textContent = document.body.classList.contains('edit-closed') ? '◀ 編集' : '▶ 閉じる';
   }
   function epName(i,el){ if(items[i]){ items[i].name=el.value; renderPreviewOnly(); } }
+  function copyForX(){
+    var lines=items.slice(0,MAX).map(function(x){
+      var nm=(x.name||'').trim();
+      var code=(x.code||'').trim();
+      var price=isNum(x.buy)?('¥'+yen(x.buy)):'';
+      var line=nm + (code?(' ('+code+')'):'') + (price?(' '+price):'');
+      if(x.psa) line+=' PSA10';
+      return line;
+    });
+    var text=lines.join('\n');
+    function done(){ setStatus('X用テキストをコピーしました（'+lines.length+'件）。'); }
+    function fallback(){
+      var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try{ document.execCommand('copy'); done(); }catch(e){ setStatus('コピー失敗。手動で選択してください。',true); }
+      document.body.removeChild(ta);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(fallback);
+    } else fallback();
+  }
   function renderEdit(){
     var el=document.getElementById('epList'); if(!el) return;
     var list=items.slice(0,MAX);
@@ -413,7 +440,7 @@
   function epPriceKey(ev,i){
     if(ev.key==='Enter'){ ev.preventDefault();
       var inputs=document.querySelectorAll('#epList .epprice');
-      for(var k=0;k<inputs.length;k++){ if(+inputs[k].getAttribute('data-i')===i){ if(inputs[k+1]) inputs[k+1].focus(); break; } }
+      for(var k=0;k<inputs.length;k++){ if(+inputs[k].getAttribute('data-i')===i){ var nx=inputs[k+1]; if(nx){ nx.focus(); nx.select(); } break; } }
     }
   }
   // プレビューだけ更新(パネルのフォーカス/入力を壊さない)
