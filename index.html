@@ -151,6 +151,18 @@
   /* 価格が見切れないよう、行数の多い密度は画像上限をさらに下げる */
   .grid.g4 .imgbox{max-height:322px} .grid.g5 .imgbox{max-height:232px} .grid.g6 .imgbox{max-height:178px}
   .grid.g7 .imgbox{max-height:140px} .grid.g8 .imgbox{max-height:138px} .grid.g9 .imgbox{max-height:130px}
+
+  /* ==== v5: 価格帯を金ベタ(影なし) / 画像の歪み解消(比率保持) ==== */
+  .pr{ background:#e8c15a !important; background-image:none !important; color:#241606 !important;
+       box-shadow:none !important; border-radius:8px; padding:2px 14px; }
+  .pr .y{ color:#241606 !important; }
+  /* 画像枠は固定高さ + contain で歪ませない(aspect-ratioを無効化) */
+  .imgbox{ aspect-ratio:auto !important; }
+  .imgbox img,.imgbox .noimg{ width:100% !important; height:100% !important; object-fit:contain !important; }
+  /* 各密度の画像枠の高さ(比率は画像側でcontain維持) */
+  .g1 .imgbox{height:470px !important} .g2 .imgbox{height:452px !important} .g3 .imgbox{height:410px !important}
+  .g4 .imgbox{height:322px !important} .g5 .imgbox{height:232px !important} .g6 .imgbox{height:178px !important}
+  .g7 .imgbox{height:140px !important} .g8 .imgbox{height:138px !important} .g9 .imgbox{height:130px !important}
 </style>
 </head>
 <body>
