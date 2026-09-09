@@ -163,6 +163,7 @@
     <div class="line">
       <input id="q" type="text" placeholder="カード名・型番で検索（例: リザードンex ／ 201/165）" onkeydown="if(event.key==='Enter')doSearch()">
       <button class="btn btn-sub" onclick="doSearch()">検索</button>
+      <button class="btn btn-sub" onclick="manualAdd()">手動追加</button>
     </div>
     <div class="line">
       <span class="lbl">テンプレート</span>
@@ -335,6 +336,31 @@
         render(); setStatus('画像を'+(url?'差し替えました':'自動に戻しました')+'（保存済み）。');
       } else setStatus('画像保存に失敗: '+((r&&r.error)||'不明'),true);
     }).catch(function(e){ setStatus('画像保存に失敗: '+e.message,true); });
+  }
+
+  /* ---- 手動でカードを追加(トレカキングダムに無いカード) ---- */
+  async function manualAdd(){
+    var name=prompt('カード名を入力'); if(!name) return; name=name.trim(); if(!name) return;
+    var buyS=prompt('買取価格（円）を入力'); if(buyS===null) return;
+    var buy=Number(String(buyS).replace(/[^\d]/g,''))||0;
+    var img=prompt('画像URL（空欄可 / 外部サイトのURLでもOK）','')||''; img=img.trim();
+    if(img && confirm('この画像を自分のGitHubに保存して使いますか？\n（推奨：URLが安定し、元サイトが消えても残ります。GAS未設定なら元URLのまま使用）')){
+      setStatus('画像を取り込み中…');
+      try{
+        var r=await jsonp(apiUrl(),{action:'img_import', url:img});
+        if(r && r.url){ img=r.url; if(r.note) setStatus(r.note); }
+        else if(r && r.error){ alert('取り込み失敗: '+r.error+'\n元のURLをそのまま使います'); }
+      }catch(e){ alert('取り込み失敗: '+e.message+'\n元のURLをそのまま使います'); }
+    }
+    var code=prompt('型番（任意・例 110/080）','')||'';
+    setStatus('保存中…');
+    jsonp(apiUrl(),{action:'custom_add', name:name, code:code, buy:buy, img:img, rarity:''}).then(function(r){
+      if(r && r.status==='saved'){
+        var it=r.item;
+        items.push({id:it.id, code:it.code, name:it.name, img:it.img, imgAlt:it.imgAlt, rushPrice:it.rushPrice, aPrice:it.aPrice, buy:it.buy});
+        render(); setStatus(name+' を追加・保存しました（検索にも出ます）。');
+      } else setStatus('保存失敗: '+((r&&r.error)||'不明'),true);
+    }).catch(function(e){ setStatus('保存失敗: '+e.message,true); });
   }
 
   /* ---- テンプレート ---- */
