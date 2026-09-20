@@ -565,7 +565,7 @@
       setStatus('テンプレート「'+name+'」を読み込みました（'+items.length+'件・最新価格）。');
     }).catch(function(e){ setStatus('読込失敗: '+e.message,true); });
   }
-  function tplPayload(){ return JSON.stringify(items.slice(0,MAX).map(function(x){ return {code:x.code||'', name:x.name||'', psa:!!x.psa, buy:(x.psa? x.buy : undefined)}; })); }
+  function tplPayload(){ return JSON.stringify(items.slice(0,MAX).map(function(x){ return {code:x.code||'', name:x.name||'', psa:!!x.psa, buy:x.buy}; })); }
   function tplSave(){
     if(!items.length){ setStatus('保存する内容がありません。',true); return; }
     var name=prompt('新しいテンプレート名を入力');
