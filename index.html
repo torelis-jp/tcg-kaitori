@@ -39,7 +39,7 @@
   .holder{ position:relative; margin:0 auto; overflow:hidden; }
   #board{width:1240px; height:1754px; position:absolute; top:0; left:0; transform-origin:top left;
     overflow:hidden; color:var(--ink); background:#0b0b0b center/cover no-repeat;
-    display:flex; flex-direction:column; padding:40px 40px 52px;}
+    display:flex; flex-direction:column; padding:40px 40px 26px;}
   .hd{flex:none}
   .tag{display:inline-block; background:var(--gold); color:#241c07; font-weight:900; font-size:18px;
     letter-spacing:2px; padding:4px 12px; border-radius:6px; outline:none}
@@ -317,6 +317,14 @@
     text-shadow:-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000 !important; }
   .handle{ font-size:28px !important; color:#ffe60a !important; font-weight:900 !important;
     text-shadow:-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000 !important; }
+
+  /* ==== v10: 買取バナー中央(「買取」削除) / Xロゴ削除 / 注意書き1行・下寄せ ==== */
+  .imgbox{ max-height:none !important; aspect-ratio:auto !important; }  /* 旧max-height制限を解除(高さはfitGridがpx指定) */
+  .pr{ justify-content:center !important; }
+  .pr .pb-label{ display:none !important; }
+  .handle{ display:none !important; }
+  .note{ white-space:nowrap !important; font-size:22px !important; line-height:1.2 !important; max-width:none !important; }
+  .ft{ padding-top:2px !important; margin-top:6px !important; }
 </style>
 </head>
 <body>
@@ -362,7 +370,6 @@
         <div class="gridwrap"><div class="grid g3" id="rows"><div class="empty">検索してカードを追加してください。</div></div></div>
         <div class="ft">
           <span class="note" contenteditable="true">買取価格はカードの状態・在庫状況・相場の変動によって変更になる場合がございます。予めご了承ください。</span>
-          <span class="handle" contenteditable="true">@torelis_soka</span>
         </div>
       </div>
     </div>
@@ -395,11 +402,19 @@
 
   // ===== 自店買取額の算出（元値=カードラッシュ price_rush）=====
   function ceil100(n){ return Math.ceil((Number(n)||0)/100)*100; }
+  // 1万円以上のカード用の丸め: 百円端数が500円以下→500円に合わせ / 600円以上→1000円単位に繰り上げ
+  function round500k(v){
+    var v100=Math.ceil((Number(v)||0)/100)*100;   // まず100円単位(切り上げ)
+    var th=Math.floor(v100/1000)*1000, h=v100-th;  // 千円単位と百円端数
+    if(h===0) return th;                           // ちょうど千円単位はそのまま
+    if(h<=500) return th+500;                      // 500円以下 → 500円に合わせる
+    return th+1000;                                // 600円以上 → 1000円繰り上げ
+  }
   function computeBuy(rush){
     var p=Number(rush); if(!isFinite(p)||p<=0) return 0;
-    if(p>=70000) return ceil100(p*1.0);   // 70,000円〜 ×1.0
-    if(p>=30000) return ceil100(p*0.9);   // 30,000〜69,999 ×0.9
-    if(p>=10000) return ceil100(p*0.85);  // 10,000〜29,999 ×0.85
+    if(p>=70000) return round500k(p*1.0);  // 70,000円〜 ×1.0（500/1000丸め）
+    if(p>=30000) return round500k(p*0.9);  // 30,000〜69,999 ×0.9（500/1000丸め）
+    if(p>=10000) return round500k(p*0.85); // 10,000〜29,999 ×0.85（500/1000丸め）
     if(p>=5000)  return ceil100(p*0.8);   // 5,000〜9,999 ×0.8
     if(p>=1000)  return ceil100(p*0.75);  // 1,000〜4,999 ×0.75（1,000円以上は100円切り上げ）
     if(p>=900) return 600;               // 以下は価格帯で固定額
@@ -416,7 +431,17 @@
   }
   function applyBuy(it){ if(it && it.rushPrice!=null && !it.manual){ var b=computeBuy(it.rushPrice); if(b>0) it.buy=b; } }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-  function colsFor(n){ return n<=1?1 : n<=2?2 : n<=6?3 : n<=20?4 : n<=35?5 : 6; }
+  // 盤面(約1160x1376)にカード(5:7)を最大サイズで敷き詰める列数を選ぶ
+  function colsFor(n){
+    if(n<=1) return 1;
+    var W=1160, H=1376, AR=1.4, best=1, bestSize=0;
+    for(var c=1;c<=Math.min(n,9);c++){
+      var r=Math.ceil(n/c);
+      var w=Math.min(W/c, (H/r)/AR);
+      if(w>bestSize+0.001){ bestSize=w; best=c; }
+    }
+    return best;
+  }
 
   // 枚数に応じてカード高さを自動調整（背景が少し見える程度に縦を埋める）
   function fitGrid(){
@@ -424,39 +449,36 @@
     if(!wrap||!grid) return;
     var cells=grid.querySelectorAll('.cell'); var n=cells.length; if(!n) return;
     var cols=colsFor(n); var rows=Math.ceil(n/cols);
-    var H=wrap.clientHeight; if(H<=0) return;
-    var rowGap=parseFloat(getComputedStyle(grid).rowGap)||0;
-    var first=cells[0];
-    var ib=first.querySelector('.imgbox');
-    var colW=ib? ib.clientWidth : 0;
-    var fill=1.0;                                // 縦をいっぱいに使う
-    var availPerRow=(H*fill - rowGap*(rows-1))/rows;   // カード名は非表示なので差し引き無し
-    var h=availPerRow;
-    if(colW>0) h=Math.min(h, colW*1.55);         // カード比(5:7)程度を上限に（余白を作りすぎない）
-    h=Math.max(90, Math.floor(h));
-    for(var i=0;i<cells.length;i++){ var b=cells[i].querySelector('.imgbox'); if(b) b.style.setProperty('height', h+'px','important'); }
-    // 買取バナー: 下1/3の高さに合わせて金額フォントを自動調整（幅に収める）
-    var bh=Math.max(20, Math.round(h*0.33));
-    var baseFs=Math.floor(bh*0.62); if(baseFs<8) baseFs=8;
-    // パス1: 各カードが収まる最大フォントを求め、全体で最小値(=全カード統一サイズ)を採用
+    var H=wrap.clientHeight, W=wrap.clientWidth; if(H<=0||W<=0) return;
+    var AR=1.40;                                  // カード縦横比(5:7)。固定してhtml2canvasの横伸びを防止
+    // カード幅=横(列数)と縦(行数)の両制約で決定。比率を保ったまま最大化
+    var imgW=Math.min((W*0.998)/cols, (H*0.995/rows)/AR);
+    imgW=Math.max(60, Math.floor(imgW));
+    var imgH=Math.round(imgW*AR);
+    // 列幅を固定し中央寄せ(1frのストレッチをやめて正しい比率に)
+    grid.style.setProperty('grid-template-columns','repeat('+cols+','+imgW+'px)','important');
+    grid.style.setProperty('justify-content','center','important');
+    grid.style.setProperty('width','auto','important');
+    grid.style.setProperty('margin','0 auto','important');
+    for(var i=0;i<cells.length;i++){ var b=cells[i].querySelector('.imgbox'); if(b){ b.style.setProperty('width', imgW+'px','important'); b.style.setProperty('height', imgH+'px','important'); } }
+    // 買取バナー: 下1/3・中央寄せ・金額フォント自動調整(全カード統一)
+    var bh=Math.max(20, Math.round(imgH*0.33));
+    var baseFs=Math.floor(bh*0.68); if(baseFs<8) baseFs=8;
     var minFs=baseFs;
     for(var i=0;i<cells.length;i++){
       var pr=cells[i].querySelector('.pr'); if(!pr) continue;
-      var ib2=cells[i].querySelector('.imgbox'); var cw=ib2? ib2.clientWidth : colW;
-      pr.style.setProperty('width', cw+'px','important');     // 幅・高さpx明示(html2canvasの%崩れ防止)
+      pr.style.setProperty('width', imgW+'px','important');
       pr.style.setProperty('height', bh+'px','important');
-      var amt=pr.querySelector('.pb-amt'), lab=pr.querySelector('.pb-label');
+      var amt=pr.querySelector('.pb-amt');
       var fs=baseFs; pr.style.setProperty('font-size', fs+'px','important');
       if(amt){
-        var labW=lab? lab.offsetWidth : 0;
-        var avail=cw - labW - 16;
+        var avail=imgW-14;
         if(amt.scrollWidth>avail && avail>0){ fs=Math.max(8, Math.floor(fs*avail/amt.scrollWidth)); pr.style.setProperty('font-size', fs+'px','important'); }
         var g=0;
-        while(g++<24){ labW=lab? lab.offsetWidth : 0; avail=cw - labW - 16; if(amt.scrollWidth<=avail || fs<=8) break; fs=Math.max(8, fs-2); pr.style.setProperty('font-size', fs+'px','important'); }
+        while(g++<24){ if(amt.scrollWidth<=(imgW-14) || fs<=8) break; fs=Math.max(8, fs-2); pr.style.setProperty('font-size', fs+'px','important'); }
       }
       if(fs<minFs) minFs=fs;
     }
-    // パス2: 全カード統一サイズを適用
     for(var i=0;i<cells.length;i++){ var pr=cells[i].querySelector('.pr'); if(pr) pr.style.setProperty('font-size', minFs+'px','important'); }
   }
   // フォント(極太ゴシック)読込後に必ず再フィット。非同期読込で金額が見切れるのを防止
@@ -550,7 +572,7 @@
         '<div class="drag" title="ドラッグで移動">⠿</div>'+
         (it.psa?'<img class="psaBadge" src="'+PSA_BADGE+'" alt="PSA10">':'')+
         '<div class="imgbox">'+thumb+rushc+
-          '<div class="pr"><span class="pb-label">買<br>取</span><span class="pb-amt"><span class="y">¥</span>'+yen(it.buy)+'</span></div>'+
+          '<div class="pr"><span class="pb-amt"><span class="y">¥</span>'+yen(it.buy)+'</span></div>'+
         '</div>';
       wrap.appendChild(cell);
     });
