@@ -309,6 +309,13 @@
   .pr .y{ color:#e3000f !important; font-size:.72em !important; }
   /* 中央ラッシュ価格も極太に */
   .refc{ font-family:"Dela Gothic One","Noto Sans JP",sans-serif !important; font-weight:400 !important; }
+
+  /* ==== v9: 注意書きを大きく＆黒縁で視認性UP ==== */
+  .ft{ padding-top:10px !important; gap:22px !important; flex-wrap:wrap !important; }
+  .note{ font-size:25px !important; line-height:1.3 !important; max-width:1040px !important; color:#fff !important; font-weight:900 !important;
+    text-shadow:-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000 !important; }
+  .handle{ font-size:28px !important; color:#ffe60a !important; font-weight:900 !important;
+    text-shadow:-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000 !important; }
 </style>
 </head>
 <body>
@@ -408,7 +415,7 @@
   }
   function applyBuy(it){ if(it && it.rushPrice!=null && !it.manual){ var b=computeBuy(it.rushPrice); if(b>0) it.buy=b; } }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-  function colsFor(n){ return n<=1?1 : n<=2?2 : n<=6?3 : n<=12?4 : n<=20?5 : n<=30?6 : n<=42?7 : n<=48?8 : 9; }
+  function colsFor(n){ return n<=1?1 : n<=2?2 : n<=6?3 : n<=12?4 : n<=30?5 : n<=48?6 : 7; }
 
   // 枚数に応じてカード高さを自動調整（背景が少し見える程度に縦を埋める）
   function fitGrid(){
@@ -451,7 +458,15 @@
     // パス2: 全カード統一サイズを適用
     for(var i=0;i<cells.length;i++){ var pr=cells[i].querySelector('.pr'); if(pr) pr.style.setProperty('font-size', minFs+'px','important'); }
   }
+  // フォント(極太ゴシック)読込後に必ず再フィット。非同期読込で金額が見切れるのを防止
   var _fitT=null;
+  function fitGridSoon(){
+    fitGrid();
+    if(document.fonts && document.fonts.load){
+      try{ document.fonts.load('400 40px "Dela Gothic One"', '¥0123456789,買取').then(function(){ fitGrid(); }).catch(function(){}); }catch(e){}
+    }
+    setTimeout(fitGrid, 180);   // 保険
+  }
   window.addEventListener('resize', function(){ clearTimeout(_fitT); _fitT=setTimeout(fitGrid,120); });
 
   function fitBoard(){
@@ -538,7 +553,7 @@
         '</div>';
       wrap.appendChild(cell);
     });
-    fitGrid();
+    fitGridSoon();
     renderEdit();
   }
   function removeRow(i){ items.splice(i,1); render(); }
