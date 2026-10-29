@@ -233,15 +233,56 @@
   #epRefresh{ display:block; width:100%; margin-bottom:8px; background:#2e7d32; color:#fff; border:0;
     border-radius:8px; padding:9px 0; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; }
   #epRefresh:disabled{ opacity:.6; cursor:default; }
+
+  /* ==== v7: WANTED風（枠なし / 黄バナー下部重ね / 中央ラッシュ価格 / 隙間最小・自動サイズ） ==== */
+  /* カードの枠を撤去（背景・枠線・角丸） */
+  .cell{ background:transparent !important; border:0 !important; border-radius:0 !important; overflow:visible !important; }
+  /* 隙間：複数枚は詰める／少数は少し空ける */
+  .grid{ gap:4px !important; }
+  .grid.g1,.grid.g2,.grid.g3{ gap:10px !important; }
+  /* 列幅（少数枚は大きく＝背景が少し見える） */
+  .grid.g1{ grid-template-columns:repeat(1,minmax(0,760px)) !important; justify-content:center !important; width:auto !important; margin:0 auto !important; }
+  .grid.g2{ grid-template-columns:repeat(2,minmax(0,470px)) !important; justify-content:center !important; width:auto !important; margin:0 auto !important; }
+  .grid.g3{ grid-template-columns:repeat(3,minmax(0,330px)) !important; justify-content:center !important; width:auto !important; margin:0 auto !important; }
+  /* 画像枠：相対配置（バナー/中央価格の土台）。高さ≒幅×1.4でカードがぴったり収まる */
+  .imgbox{ position:relative !important; margin:0 !important; aspect-ratio:auto !important; }
+  .imgbox img,.imgbox .noimg{ width:100% !important; height:100% !important; object-fit:contain !important; }
+  .g1 .imgbox{ height:952px !important } .g2 .imgbox{ height:630px !important } .g3 .imgbox{ height:462px !important }
+  .g4 .imgbox{ height:350px !important } .g5 .imgbox{ height:280px !important } .g6 .imgbox{ height:234px !important }
+  .g7 .imgbox{ height:200px !important } .g8 .imgbox{ height:175px !important } .g9 .imgbox{ height:155px !important }
+  /* カード名：細い1行 */
+  .nm{ margin:2px 2px 0 !important; line-height:1.15 !important; }
+  /* 黄色バナー：カード下部に重ねる（左寄せ・極太・黒「買取」赤金額） */
+  .pr{ position:absolute !important; left:0 !important; right:auto !important; bottom:7% !important; top:auto !important;
+       display:inline-flex !important; align-items:center !important; gap:.08em !important;
+       background:#ffe814 !important; background-image:none !important; color:#111 !important;
+       border-radius:0 7px 7px 0 !important; box-shadow:0 2px 7px rgba(0,0,0,.45) !important;
+       padding:.08em .5em .08em .3em !important; margin:0 !important; z-index:6 !important;
+       font-family:"Noto Sans JP",sans-serif !important; font-weight:900 !important; letter-spacing:-.01em !important;
+       white-space:nowrap !important; }
+  .pr .pb-label{ color:#111 !important; font-size:.58em !important; margin-right:.1em; }
+  .pr .pb-amt{ color:#e3000f !important; }
+  .pr .y{ color:#e3000f !important; font-size:.66em !important; margin-right:.02em !important; vertical-align:baseline !important; }
+  /* バナー金額サイズ（大きめ） */
+  .g1 .pr{ font-size:70px !important } .g2 .pr{ font-size:52px !important } .g3 .pr{ font-size:40px !important }
+  .g4 .pr{ font-size:32px !important } .g5 .pr{ font-size:27px !important } .g6 .pr{ font-size:23px !important }
+  .g7 .pr{ font-size:20px !important } .g8 .pr{ font-size:18px !important } .g9 .pr{ font-size:16px !important }
+  /* 中央ラッシュ参考価格：白背景・黒文字・大きく（出力時は非表示） */
+  .refc{ position:absolute !important; top:46% !important; left:50% !important; transform:translate(-50%,-50%) !important;
+         background:rgba(255,255,255,.9) !important; color:#000 !important; font-weight:900 !important;
+         border:2px solid #000 !important; border-radius:8px !important; padding:.08em .4em !important;
+         white-space:nowrap !important; z-index:7 !important; pointer-events:none !important; line-height:1.1 !important;
+         font-family:"Noto Sans JP",sans-serif !important; }
+  .g1 .refc{ font-size:48px !important } .g2 .refc{ font-size:40px !important } .g3 .refc{ font-size:30px !important }
+  .g4 .refc{ font-size:24px !important } .g5 .refc{ font-size:20px !important } .g6 .refc{ font-size:17px !important }
+  .g7 .refc{ font-size:15px !important } .g8 .refc{ font-size:13px !important } .g9 .refc{ font-size:12px !important }
+  body.exporting .refc{ display:none !important; }
+  .ref{ display:none !important; }
 </style>
 </head>
 <body>
 
   <div class="panel">
-    <div class="line">
-      <input id="api" type="text" placeholder="TCK用GASウェブアプリのURL (.../exec)" value="https://script.google.com/macros/s/AKfycby9KIDduawa25vdpy8_QE_L4Le17Abq_w5p-jHkFtEhmCDApfPHkfB1g5T7NkvDHpyfWA/exec">
-      <span class="lbl">← デプロイしたURL</span>
-    </div>
     <div class="line">
       <input id="q" type="text" placeholder="カード名・型番で検索（例: リザードンex ／ 201/165）" onkeydown="if(event.key==='Enter')doSearch()">
       <button class="btn btn-sub" onclick="doSearch()">検索</button>
@@ -262,7 +303,7 @@
       <span style="flex:1"></span>
       <button class="btn btn-main" onclick="exportPng()">画像を保存</button>
     </div>
-    <div id="status" class="status">TCKのGAS URLを貼り、カード名・型番で検索 → 「追加」で買取表へ。⠿で並べ替え。</div>
+    <div id="status" class="status">カード名・型番で検索 → 「追加」で買取表へ。⠿で並べ替え。</div>
   </div>
 
   <div id="results"></div>
@@ -307,12 +348,59 @@
   (function(){ var d=new Date();
     document.getElementById('date').textContent = d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate()+' 時点'; })();
 
-  function apiUrl(){ return document.getElementById('api').value.trim(); }
+  var _AP=["aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z","5Y2J5OUtJRGR1YXdhMjV2ZHB5OF9RRV9MNExlMTdBYnFfdzVwLW","pIa0Z0RWhtQ0RBcGZQSGtmQjFnNVQ3Tmt2REhweWZXQS9leGVj"];
+  function apiUrl(){ try{ return atob(_AP.join('')); }catch(e){ return ''; } }
   function setStatus(m,e){ var el=document.getElementById('status'); el.textContent=m; el.className='status'+(e?' err':''); }
   function yen(n){ return Number(n).toLocaleString('ja-JP'); }
   function isNum(v){ return typeof v==='number' || /^\d+$/.test(String(v).replace(/,/g,'')); }
+
+  // ===== 自店買取額の算出（元値=カードラッシュ price_rush）=====
+  function ceil10(n){ return Math.ceil((Number(n)||0)/10)*10; }
+  function computeBuy(rush){
+    var p=Number(rush); if(!isFinite(p)||p<=0) return 0;
+    if(p>=70000) return ceil10(p*1.0);   // 70,000円〜 ×1.0
+    if(p>=30000) return ceil10(p*0.9);   // 30,000〜69,999 ×0.9
+    if(p>=10000) return ceil10(p*0.85);  // 10,000〜29,999 ×0.85
+    if(p>=5000)  return ceil10(p*0.8);   // 5,000〜9,999 ×0.8
+    if(p>=1000)  return ceil10(p*0.75);  // 1,000〜4,999 ×0.75（以上は10円切り上げ）
+    if(p>=900) return 600;               // 以下は価格帯で固定額
+    if(p>=800) return 500;
+    if(p>=700) return 400;
+    if(p>=600) return 300;
+    if(p>=500) return 300;
+    if(p>=400) return 200;
+    if(p>=300) return 100;
+    if(p>=200) return 100;
+    if(p>=100) return 50;
+    if(p>=50)  return 10;
+    return 1;                            // 50円未満 → 1円
+  }
+  function applyBuy(it){ if(it && it.rushPrice!=null && !it.manual){ var b=computeBuy(it.rushPrice); if(b>0) it.buy=b; } }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function colsFor(n){ return n<=1?1 : n<=2?2 : n<=6?3 : n<=12?4 : n<=20?5 : n<=30?6 : n<=42?7 : n<=48?8 : 9; }
+
+  // 枚数に応じてカード高さを自動調整（背景が少し見える程度に縦を埋める）
+  function fitGrid(){
+    var wrap=document.querySelector('.gridwrap'); var grid=document.getElementById('rows');
+    if(!wrap||!grid) return;
+    var cells=grid.querySelectorAll('.cell'); var n=cells.length; if(!n) return;
+    var cols=colsFor(n); var rows=Math.ceil(n/cols);
+    var H=wrap.clientHeight; if(H<=0) return;
+    var rowGap=parseFloat(getComputedStyle(grid).rowGap)||4;
+    var first=cells[0];
+    var nmEl=first.querySelector('.nm');
+    var nmH=nmEl? (1.15*(parseFloat(getComputedStyle(nmEl).fontSize)||14)+6) : 20;
+    var ib=first.querySelector('.imgbox');
+    var colW=ib? ib.clientWidth : 0;
+    var fill=(n<=3?0.985:0.965);                 // 少数枚ほど縦をしっかり埋める
+    var availPerRow=(H*fill - rowGap*(rows-1))/rows - nmH;
+    var h=availPerRow;
+    if(colW>0) h=Math.min(h, colW*1.4);          // カード比(5:7)を超えて余白を作らない
+    h=Math.max(90, Math.floor(h));
+    for(var i=0;i<cells.length;i++){ var b=cells[i].querySelector('.imgbox'); if(b) b.style.setProperty('height', h+'px','important'); }
+  }
+  var _fitT=null;
+  window.addEventListener('resize', function(){ clearTimeout(_fitT); _fitT=setTimeout(fitGrid,120); });
 
   function fitBoard(){
     var maxW=Math.min(760,(window.innerWidth||1240)-24);
@@ -344,7 +432,7 @@
     setStatus('検索中…');
     jsonp(apiUrl(), {action:'search', q:q}).then(function(d){
       if(d.error){ setStatus('検索失敗: '+d.error,true); return; }
-      lastResults=d.items||[]; renderResults(); tplRefresh();
+      lastResults=d.items||[]; lastResults.forEach(applyBuy); renderResults(); tplRefresh();
       setStatus(lastResults.length? lastResults.length+'件ヒット。「追加」で買取表へ。':'ヒットなし。',!lastResults.length);
     }).catch(function(e){ setStatus('検索失敗: '+e.message,true); });
   }
@@ -389,14 +477,17 @@
       var cell=document.createElement('div');
       cell.className='cell';
       cell.setAttribute('data-idx', i);
+      var rushc=(it.rushPrice!=null)? '<div class="refc">¥'+yen(it.rushPrice)+'</div>' : '';
       cell.innerHTML=
         '<div class="drag" title="ドラッグで移動">⠿</div>'+
-        (it.psa?'<img class="psaBadge" src="'+PSA_BADGE+'" alt="PSA10">':'')+'<div class="imgbox">'+thumb+'</div>'+
-        '<div class="nm" contenteditable="true" onblur="syncName('+i+',this)">'+esc(name)+'</div>'+
-        '<div class="pr"><span class="y">¥</span>'+yen(it.buy)+'</div>'+
-        '<div class="ref">'+refText(it)+'</div>';
+        (it.psa?'<img class="psaBadge" src="'+PSA_BADGE+'" alt="PSA10">':'')+
+        '<div class="imgbox">'+thumb+rushc+
+          '<div class="pr"><span class="pb-label">買取</span><span class="pb-amt"><span class="y">¥</span>'+yen(it.buy)+'</span></div>'+
+        '</div>'+
+        '<div class="nm" contenteditable="true" onblur="syncName('+i+',this)">'+esc(name)+'</div>';
       wrap.appendChild(cell);
     });
+    fitGrid();
     renderEdit();
   }
   function removeRow(i){ items.splice(i,1); render(); }
@@ -541,7 +632,7 @@
     jsonp(apiUrl(),{action:'custom_add', name:name, code:code, buy:buy, img:img, rarity:''}).then(function(r){
       if(r && r.status==='saved'){
         var it=r.item;
-        items.push({id:it.id, code:it.code, name:it.name, img:it.img, imgAlt:it.imgAlt, rushPrice:it.rushPrice, aPrice:it.aPrice, buy:it.buy});
+        items.push({id:it.id, code:it.code, name:it.name, img:it.img, imgAlt:it.imgAlt, rushPrice:it.rushPrice, aPrice:it.aPrice, buy:it.buy, manual:true});
         render(); setStatus(name+' を追加・保存しました（検索にも出ます）。');
       } else setStatus('保存失敗: '+((r&&r.error)||'不明'),true);
     }).catch(function(e){ setStatus('保存失敗: '+e.message,true); });
@@ -561,7 +652,7 @@
     setStatus('テンプレート「'+name+'」を読込中（最新価格で再計算）…');
     jsonp(apiUrl(), {action:'tpl_load', name:name}).then(function(d){
       if(d.error){ setStatus('読込失敗: '+d.error,true); return; }
-      items=(d.items||[]); render();
+      items=(d.items||[]); items.forEach(applyBuy); render();
       setStatus('テンプレート「'+name+'」を読み込みました（'+items.length+'件・最新価格）。');
     }).catch(function(e){ setStatus('読込失敗: '+e.message,true); });
   }
