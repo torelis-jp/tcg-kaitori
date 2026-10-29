@@ -39,7 +39,7 @@
   .holder{ position:relative; margin:0 auto; overflow:hidden; }
   #board{width:1240px; height:1754px; position:absolute; top:0; left:0; transform-origin:top left;
     overflow:hidden; color:var(--ink); background:#0b0b0b center/cover no-repeat;
-    display:flex; flex-direction:column; padding:52px 108px 96px;}
+    display:flex; flex-direction:column; padding:40px 40px 52px;}
   .hd{flex:none}
   .tag{display:inline-block; background:var(--gold); color:#241c07; font-weight:900; font-size:18px;
     letter-spacing:2px; padding:4px 12px; border-radius:6px; outline:none}
@@ -285,9 +285,10 @@
   /* 日付を右上・背景(赤)に合う配色 */
   #corner{ position:absolute !important; top:34px !important; left:auto !important; right:40px !important; align-items:flex-end !important; z-index:9 !important; }
   #corner .cdate{ background:rgba(255,255,255,.92) !important; color:#c01020 !important; border:2px solid #c01020 !important; font-weight:900 !important; font-size:20px !important; padding:3px 12px !important; border-radius:8px !important; }
-  /* 中央ヘッダーバナー(画像3) */
-  .logo{ width:700px !important; max-width:62% !important; margin:0 auto 6px !important; }
-  .hd{ text-align:center !important; margin-top:2px !important; }
+  /* 中央ヘッダーバナー(画像3) — コンパクト化してカードに縦の余裕を */
+  .logo{ width:540px !important; max-width:52% !important; margin:0 auto 2px !important; }
+  .hd{ text-align:center !important; margin-top:0 !important; margin-bottom:0 !important; flex:none !important; }
+  .gridwrap{ padding-top:2px !important; }
 
   /* カード名は非表示 / 隙間ゼロ */
   .nm{ display:none !important; }
@@ -415,7 +416,7 @@
   }
   function applyBuy(it){ if(it && it.rushPrice!=null && !it.manual){ var b=computeBuy(it.rushPrice); if(b>0) it.buy=b; } }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-  function colsFor(n){ return n<=1?1 : n<=2?2 : n<=6?3 : n<=12?4 : n<=30?5 : n<=48?6 : 7; }
+  function colsFor(n){ return n<=1?1 : n<=2?2 : n<=6?3 : n<=20?4 : n<=35?5 : 6; }
 
   // 枚数に応じてカード高さを自動調整（背景が少し見える程度に縦を埋める）
   function fitGrid(){
@@ -428,10 +429,10 @@
     var first=cells[0];
     var ib=first.querySelector('.imgbox');
     var colW=ib? ib.clientWidth : 0;
-    var fill=(n<=3?0.99:0.985);                  // 少数枚ほど縦をしっかり埋める
+    var fill=1.0;                                // 縦をいっぱいに使う
     var availPerRow=(H*fill - rowGap*(rows-1))/rows;   // カード名は非表示なので差し引き無し
     var h=availPerRow;
-    if(colW>0) h=Math.min(h, colW*1.42);         // カード比(5:7)を超えて余白を作らない
+    if(colW>0) h=Math.min(h, colW*1.55);         // カード比(5:7)程度を上限に（余白を作りすぎない）
     h=Math.max(90, Math.floor(h));
     for(var i=0;i<cells.length;i++){ var b=cells[i].querySelector('.imgbox'); if(b) b.style.setProperty('height', h+'px','important'); }
     // 買取バナー: 下1/3の高さに合わせて金額フォントを自動調整（幅に収める）
